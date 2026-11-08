@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>BOUNDARY · Lifeguard — Panel de continuidad segura</title>
+  <meta name="description" content="Panel local de una tarea supervisada: ciclo de rescate en siete estados, seguridad aplicada, intervención del guardia, progreso, resolución verificada, tokens y evidencia. Lee sólo la sesión de /api/continuity y no muestra datos que la API no haya entregado.">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido principal</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <p class="brand__eyebrow">Capa de seguridad y continuidad para agentes autónomos</p>
+      <h1 class="brand__title">BOUNDARY <span class="brand__slash" aria-hidden="true">/</span> Lifeguard</h1>
+      <p class="brand__sub">Qué pasó con la tarea, paso a paso: si la seguridad bloqueó algo, si el guardia intervino, si el worker siguió y si la tarea quedó resuelta y verificada.</p>
+    </div>
+    <div class="topbar__status">
+      <p class="brand__sub" style="margin:0 0 8px"><a href="bench.html">Benchmark B/D/E: what happened, what BOUNDARY did, did it help →</a></p>
+      <p id="connection" class="conn conn--unknown" role="status" aria-live="polite">Sin conexión verificada — esperando la API de continuidad</p>
+      <p id="connection-detail" class="conn__detail">El panel lee la sesión de <code>/api/continuity</code>. Si la API no responde, no se muestra ningún resultado.</p>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" role="alert" hidden></div>
+
+  <main id="main" tabindex="-1">
+    <section class="panel panel--primary" id="lifeguard" aria-labelledby="h-lifeguard">
+      <div class="panel__head">
+        <h2 class="panel__title" id="h-lifeguard">Tarea supervisada — qué pasó y en qué orden</h2>
+        <p class="panel__kicker">Una tarea de programación real, ejecutada por el worker del servidor bajo política determinista. El guardia sólo escribe un mensaje: no ejecuta herramientas, no concede permisos y su mensaje no resuelve la tarea.</p>
+      </div>
+      <div class="panel__body panel__body--lifeguard">
+        <div class="actions lg-actions">
+          <button id="lg-start" class="btn" type="button" aria-describedby="lg-start-help">Iniciar 1 tarea de programación real</button>
+          <button id="lg-refresh" class="btn btn--ghost" type="button" disabled>Actualizar estado</button>
+          <button id="lg-key-toggle" class="btn btn--ghost" type="button" aria-expanded="false" aria-controls="lg-key-wrap">Usar llave de operador</button>
+        </div>
+        <p id="lg-start-help" class="lg-help">El servidor elige la tarea, la política y los límites; el panel no propone ruta, herramienta ni modelo. El botón queda deshabilitado mientras la sesión está en cola o en ejecución, para no lanzar una segunda tarea.</p>
+
+        <div id="lg-key-wrap" class="lg-key" hidden>
+          <label class="lg-key__label" for="lg-key">Llave de operador (opcional)</label>
+          <input id="lg-key" class="lg-key__input" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="lg-key-help">
+          <p id="lg-key-help" class="lg-key__help">Si el core protege la escritura, sólo se envía en la cabecera <code>X-Continuity-Key</code> de las peticiones de esta pestaña, al mismo origen. No se guarda en el navegador, no se registra y no se muestra. Se descarta al cerrar el campo.</p>
+        </div>
+
+        <div id="lg-errors" class="lg-errors" role="alert" hidden></div>
+
+        <div id="lg-status" class="lg-status" tabindex="-1"></div>
+
+        <nav class="panel-nav" aria-label="Secciones de este panel">
+          <a class="panel-nav__link" href="#h-lg-verdict">Qué pasó</a>
+          <a class="panel-nav__link" href="#h-lg-timeline">Ciclo de rescate</a>
+          <a class="panel-nav__link" href="#h-lg-signals">Cuatro cosas distintas</a>
+          <a class="panel-nav__link" href="#h-lg-meta">Sesión</a>
+          <a class="panel-nav__link" href="#h-lg-usage">Tokens y tiempo</a>
+          <a class="panel-nav__link" href="#h-lg-intervention">Campos</a>
+          <a class="panel-nav__link" href="#h-lg-verification">Verificación</a>
+          <a class="panel-nav__link" href="#h-lg-evidence">Evidencia</a>
+          <a class="panel-nav__link" href="#h-lg-log">Registro</a>
+        </nav>
+
+        <section class="lg-block" aria-labelledby="h-lg-verdict">
+          <h3 class="lg-block__title" id="h-lg-verdict">Qué pasó, en una frase</h3>
+          <div id="lg-verdict"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-timeline">
+          <h3 class="lg-block__title" id="h-lg-timeline">Ciclo de rescate — siete estados</h3>
+          <p class="lg-block__sub">Cada estado se pinta sólo si su campo viene informado. El orden de la secuencia es: <code>DETECTED</code> → <code>INTERVENTION_SENT</code> → <code>INTERVENTION_RECEIVED</code> → <code>RESUMED</code>. El desenlace es uno de tres: <code>RESOLVED</code>, <code>UNRESOLVED</code> o <code>NO_INTERVENTION_NEEDED</code>.</p>
+          <ul class="legend" aria-label="Leyenda de la línea de tiempo">
+            <li class="legend__item legend__item--on">Cumplido: el servidor informa el campo como <code>true</code></li>
+            <li class="legend__item legend__item--off">No cumplido: el servidor informa el campo como <code>false</code></li>
+            <li class="legend__item legend__item--unknown">SIN DATO: el campo no viene; el panel no lo deduce de otro campo</li>
+          </ul>
+          <div id="lg-timeline"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-signals">
+          <h3 class="lg-block__title" id="h-lg-signals">Cuatro cosas distintas, cuatro pintados distintos</h3>
+          <p class="lg-block__sub">Seguridad aplicada, intervención efectuada, progreso y tarea resuelta no son lo mismo. Una no implica la siguiente.</p>
+          <div id="lg-signals" class="signals"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-meta">
+          <h3 class="lg-block__title" id="h-lg-meta">Datos de la sesión</h3>
+          <div id="lg-meta"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-usage">
+          <h3 class="lg-block__title" id="h-lg-usage">Tokens y tiempo</h3>
+          <div id="lg-usage"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-intervention">
+          <h3 class="lg-block__title" id="h-lg-intervention">Intervención del guardia, campo por campo</h3>
+          <div id="lg-intervention" class="lg-block-flat"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-verification">
+          <h3 class="lg-block__title" id="h-lg-verification">Verificación final</h3>
+          <div id="lg-verification" class="lg-block-flat"></div>
+        </section>
+
+        <section class="lg-block" aria-labelledby="h-lg-evidence">
+          <h3 class="lg-block__title" id="h-lg-evidence">Evidencia — hashes de verificación</h3>
+          <div id="lg-evidence" class="lg-block-flat"></div>
+        </section>
+
+        <div class="lg-log-wrap">
+          <h3 class="lg-log__title" id="h-lg-log">Registro de la sesión (evidencia)</h3>
+          <p class="lg-log__sub">Eventos tal como los entrega el servidor, en orden de llegada y sin duplicados. El panel no genera, resume ni completa el texto: si la API deja de responder, el registro se queda como está y el error se muestra arriba.</p>
+          <p id="lg-log-empty" class="placeholder">Sin eventos: todavía no hay ninguna sesión de la que leer evidencia.</p>
+          <ol id="lg-log" class="lg-log" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" aria-labelledby="h-lg-log"></ol>
+        </div>
+
+        <div class="lg-disclaimers">
+          <p class="note"><strong>Alcance controlado.</strong> Una sola tarea, fija y elegida por el servidor: el panel no elige ruta, herramienta, modelo ni credenciales, y no puede pedir otro alcance.</p>
+          <p class="note"><strong>Sin flujo de aprobación humana.</strong> No hay ningún control en esta página que apruebe, conceda o amplíe permisos. Una operación denegada por la política sigue denegada, y el guardia no puede revertirlo.</p>
+          <p class="note"><strong>Un mensaje del guardia no es un resultado.</strong> Que el guardia escriba, o que el worker reciba el mensaje, no resuelve la tarea. Sólo se dice «resuelta» cuando el servidor informa <code>intervention.resolved = true</code> y <code>verification.passed = true</code> a la vez.</p>
+          <p class="note"><strong>«Completada» no es «resuelta».</strong> El estado <code>completed</code> de la sesión no se convierte en <code>RESOLVED</code>: es otro campo y el panel no lo sustituye.</p>
+          <p class="note"><strong>Campos opcionales.</strong> <code>detected</code>, <code>withheld</code>, <code>guardCalls</code> y <code>guardTokens</code> todavía no forman parte del contrato publicado. Si no llegan, el panel escribe <code>SIN DATO</code>: no inventa el estado. La tabla completa está en <code>docs/sprint/panel-contract.md</code>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      El worker y el guardia usan Vultr Serverless Inference cuando el backend confirma modo live.
+      El lugar de despliegue y el aislamiento requieren evidencia independiente: este panel no los certifica.
+      Todo lo que muestra procede de <code>/api/continuity</code>; no se consulta ninguna otra ruta.
+      Un campo ausente se muestra como «sin dato»; no se inventan eventos ni resultados.
+    </p>
+    <p>
+      El operador puede iniciar una tarea fija. El guardia no concede permisos; la política y el sandbox siguen siendo la autoridad.
+    </p>
+    <p class="footer__meta">
+      <code>POST /api/continuity/tasks</code> · <code>GET /api/continuity/tasks/:id</code> · <code>GET /api/continuity/status</code>
+    </p>
+    <p class="footer__meta">
+      Ninguna de esas rutas se simula: un 404, un error de red o un cuerpo inesperado se muestran tal cual y el
+      panel permanece vacío. El botón solicita una sesión al servidor; no concede permisos ni ejecuta pruebas en el navegador,
+      y no guarda credenciales.
+    </p>
+  </footer>
+
+  <noscript>
+    <p class="banner banner--error" role="alert">
+      Este panel necesita JavaScript para leer la sesión de <code>/api/continuity</code>. Sin JavaScript no muestra ningún estado.
+    </p>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>BOUNDARY benchmark: recorded B/D/E runs</title>
+  <meta name="description" content="Read-only view of the persisted BOUNDARY benchmark artifact: 30 recorded runs, three arms, one preregistered verdict. The page reads ./bench/sprint-report.json and executes nothing.">
+  <link rel="stylesheet" href="design.css">
+  <script src="bench.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="shell">
+    <header class="hero">
+      <div class="hero__top">
+        <h1 class="hero__title">BOUNDARY benchmark</h1>
+        <p class="mode" role="status">Recorded run — persisted artifact</p>
+      </div>
+      <p class="hero__status" id="hero-status">Reading <code>./bench/sprint-report.json</code>.</p>
+    </header>
+  </div>
+
+  <main class="shell" id="main" tabindex="-1">
+    <div class="picker" id="picker" role="group" aria-labelledby="picker-label" hidden>
+      <p class="visually-hidden" id="picker-label">Choose scenario, arm and repetition</p>
+      <div class="banner banner--info picker__banner" id="link-banner" role="status" aria-live="polite" hidden></div>
+      <p class="picker__note" id="link-note" aria-live="polite"></p>
+    </div>
+
+    <div class="loading" id="loading" role="status" hidden>
+      Reading <code>./bench/sprint-report.json</code>
+      <div class="loading__line" aria-hidden="true"></div>
+    </div>
+
+    <div class="banner banner--danger" id="error" role="alert" aria-live="polite" aria-atomic="true" hidden></div>
+
+    <div id="content" hidden>
+      <section class="lead" aria-labelledby="h-verdict">
+        <h2 class="visually-hidden" id="h-verdict">Verdict</h2>
+        <div id="verdict" class="stack"></div>
+        </section>
+
+        <section class="section" id="arms" aria-labelledby="h-arms">
+        <h2 class="section__title" id="h-arms">By arm</h2>
+          <div id="global"></div>
+          <details class="fold">
+            <summary>Per-scenario comparison</summary>
+          <div id="compare"></div>
+        </details>
+        </section>
+
+        <section class="section" id="run" aria-labelledby="h-run">
+          <h2 class="section__title" id="h-run">Selected run</h2>
+        <div id="session-meta" class="stack"></div>
+
+        <div class="pair">
+            <section class="card" aria-labelledby="h-lifeguard">
+            <h3 class="card__title" id="h-lifeguard">Lifeguard</h3>
+              <div id="block-lifeguard"></div>
+          </section>
+
+          <section class="card" aria-labelledby="h-verification">
+            <h3 class="card__title" id="h-verification">Outcome</h3>
+            <div id="block-verification"></div>
+            </section>
+          </div>
+
+          <details class="fold">
+            <summary>Worker tool calls</summary>
+            <div id="block-worker"></div>
+          </details>
+
+          <details class="fold">
+          <summary>Refusals recorded by the gateway</summary>
+            <div id="block-gateway"></div>
+          </details>
+
+          <details class="fold">
+          <summary>Sequence of the run</summary>
+          <div id="timeline"></div>
+          </details>
+        </section>
+
+        <section class="section" id="help" aria-labelledby="h-help">
+        <h2 class="section__title" id="h-help">Did it help</h2>
+        <div id="help-body" class="stack"></div>
+        </section>
+
+        <footer class="footer">
+          <p id="footer-links"></p>
+        <details class="fold">
+            <summary>Provenance and how to read this page</summary>
+          <div class="fold__body">
+              <p>This page reads one persisted artifact. It does not run the benchmark, call a model or a sandbox, and writes no files.</p>
+              <p>Source: <code>GET ./bench/sprint-report.json</code>. A field the artifact does not carry is written as <code>not recorded</code>; a missing event is written as <code>not applicable</code> with its reason, never as a zero.</p>
+              <p id="footer-meta" class="footer__meta"></p>
+            </div>
+          </details>
+      </footer>
+      </div>
+  </main>
+
+  <noscript>
+    <div class="shell">
+      <div class="banner banner--danger" role="alert">
+        This view needs JavaScript to read <code>bench/sprint-report.json</code>. Without it no figure is shown.
+      </div>
+    </div>
+  </noscript>
+</body>
+</html>
