@@ -1,0 +1,26 @@
+# dependencies and build output
+node_modules/
+dist/
+coverage/
+.tmp/
+.runs/
+
+# local secrets — never commit
+.env
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# runtime state and logs
+*.log
+audit/*.jsonl
+sessions/
+workspaces/
+
+# editor / OS
+.DS_Store
+Thumbs.db

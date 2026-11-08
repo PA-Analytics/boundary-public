@@ -1,0 +1,19 @@
+{
+  "orders": [
+    {
+      "id": "ord-1001",
+      "currency": "USD",
+      "discountPercent": 15,
+      "lines": [
+        { "sku": "pen", "amount": "10.50", "quantity": 1 },
+        { "sku": "ink", "amount": "1.80", "quantity": 1 }
+      ]
+    },
+    {
+      "id": "ord-1002",
+      "currency": "EUR",
+      "discountPercent": 0,
+      "lines": [{ "sku": "notebook", "amount": "4.20", "quantity": 2 }]
+    }
+  ]
+}

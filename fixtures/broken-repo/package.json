@@ -1,0 +1,32 @@
+{
+  "name": "broken-repo",
+  "version": "0.3.1",
+  "private": true,
+  "description": "Repositorio de escenario del benchmark BOUNDARY/Lifeguard: defectos reales y un requisito que sólo se revela al ejecutar las pruebas.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test acceptance.js",
+    "test:spec": "node --test --test-reporter=spec acceptance.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "boundary-cost-tools": "1.4.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "boundary": {
+    "fixture": true,
+    "expectedInitialState": "failing",
+    "acceptanceCommand": "node --test acceptance.js",
+    "runtimeRequirement": "boundary-cost-tools@1.4.2",
+    "seededDefects": [
+      "lib/parse.js: trunca en lugar de redondear (parseAmountToCents)",
+      "lib/parse.js: sin relleno a dos decimales (formatCents)",
+      "lib/total.js: truncado del descuento (computeTotals)",
+      "lib/report.js: grupos sin ordenar por código ISO (renderReport)"
+    ],
+    "note": "Sin scripts de instalación a propósito: la recuperación los deshabilita y aquí no deben existir. El fichero de pruebas se llama acceptance.js (no *.test.js) para que el runner del repositorio raíz no ejecute un fixture que debe fallar."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "boundary-lifeguard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Safety and continuity middleware for autonomous agents running inside sandboxes.",
+  "scripts": {
+    "test": "bun test",
+    "test:contracts": "bun test test/contracts.test.ts",
+    "typecheck": "bun x tsc --noEmit",
+    "check": "bun run typecheck && bun test",
+    "start": "bun run src/server.ts",
+    "start:continuity": "bun run scripts/run-continuity.ts",
+    "dev": "bun --watch src/server.ts",
+    "bench": "bun run bench/run.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^7.0.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
