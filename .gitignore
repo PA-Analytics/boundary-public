@@ -24,3 +24,10 @@ workspaces/
 # editor / OS
 .DS_Store
 Thumbs.db
+
+# private evaluation corpus and local workspace state — never part of the public release
+gauntlet/
+data/
+tmp-copy/
+.empryo/
+.secrets/
