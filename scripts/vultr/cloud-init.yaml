@@ -1,0 +1,66 @@
+#cloud-config
+# BOUNDARY bootstrap: usuario no-root, Bun, arranque del middleware.
+package_update: true
+package_upgrade: false
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - uidmap
+  - dbus-user-session
+  - slirp4netns
+  - fuse-overlayfs
+  - unzip
+  - ufw
+  - jq
+  - caddy
+users:
+  - name: boundary
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - __SSH_PUBKEY__
+write_files:
+  - path: /etc/sysctl.d/99-boundary.conf
+    content: |
+      kernel.unprivileged_userns_clone=1
+      user.max_user_namespaces=28633
+  - path: /etc/systemd/system/boundary.service
+    content: |
+      [Unit]
+      Description=BOUNDARY middleware
+      After=network-online.target
+      [Service]
+      User=boundary
+      WorkingDirectory=/opt/boundary
+      Environment=PORT=8080
+      ExecStart=/home/boundary/.bun/bin/bun run src/server.ts
+      Restart=always
+      RestartSec=3
+      NoNewPrivileges=true
+      PrivateTmp=true
+      ProtectSystem=strict
+      ProtectHome=read-only
+      ReadWritePaths=/opt/boundary /home/boundary
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/caddy/Caddyfile
+    content: |
+      :80 {
+        reverse_proxy 127.0.0.1:8080
+      }
+runcmd:
+  - sysctl --system
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+  - su - boundary -c "curl -fsSL https://bun.sh/install | bash"
+  - su - boundary -c "git clone __REPO_URL__ /opt/boundary || true"
+  - chown -R boundary:boundary /opt/boundary
+  - su - boundary -c "cd /opt/boundary && /home/boundary/.bun/bin/bun install"
+  - systemctl daemon-reload
+  - systemctl enable --now boundary.service
+  - systemctl enable --now caddy
+  - echo "bootstrap-complete" > /var/log/boundary-bootstrap.log
+final_message: "BOUNDARY bootstrap finished"

@@ -1,0 +1,35 @@
+# Imagen única del sandbox para BOUNDARY/GAUNTLET.
+# Node 24 porque los fixtures se construyeron con Node 24; Bun 1.4.x porque el
+# adaptador lanza `bun test`. Se construye UNA vez y se fija por Image Id
+# (content-addressable) antes de ejecutar cualquier prueba.
+FROM node:24-bookworm-slim
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Herramientas mínimas que el adaptador invoca (buildExecCommand).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      coreutils findutils ca-certificates curl unzip \
+ && rm -rf /var/lib/apt/lists/*
+
+# Bun 1.4.x fijo: el adaptador ejecuta `bun test` y `bun add`.
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash \
+ && /usr/local/bin/bun --version
+
+# Usuario no root con uid fijo: el gateway lanza `--user 1000:1000`.
+# La imagen base ya trae el usuario `node` con uid/gid 1000, así que se reutiliza
+# en vez de crear otro (groupadd 1000 fallaría con GID duplicado).
+RUN test "$(id -u node)" = "1000" && test "$(id -g node)" = "1000"
+
+# Workspace de trabajo: el único punto de montaje permitido.
+RUN mkdir -p /workspace && chown 1000:1000 /workspace
+WORKDIR /workspace
+
+ENV HOME=/home/node \
+    BUN_INSTALL=/usr/local \
+    NODE_ENV=test
+
+USER 1000:1000
+
+# Sin ENTRYPOINT: el adaptador pasa argv explícito (`sleep infinity` al preparar).
+CMD ["sleep", "infinity"]
