@@ -440,7 +440,9 @@ function execute(dir: string, state: PilotState, tool: string, args: JsonObject)
     }
     case 'proc.exec':
     case 'test.run': {
-      const argv = tool === 'test.run' ? ['node', '--test', 'acceptance.js'] : (args.argv as string[]);
+      const argv = tool === 'test.run'
+        ? (state.scenarioId === 'LG-codegen' ? ['npm', 'test'] : ['node', '--test', 'acceptance.js'])
+        : (args.argv as string[]);
       if (!Array.isArray(argv) || argv.length === 0) return { ok: false, output: 'args inválidos: {argv: [...]}' };
       if (!netIsolationAvailable()) return { ok: false, output: 'sandbox sin red no disponible (unshare -rn): ejecución denegada' };
       const r = spawnSync('unshare', ['-rn', '--', ...argv], { cwd: dir, encoding: 'utf8', timeout: 30_000, env: isolatedEnv(dir) });
