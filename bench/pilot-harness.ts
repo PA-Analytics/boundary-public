@@ -196,6 +196,7 @@ function execute(dir: string, state: PilotState, tool: string, args: JsonObject)
     case 'fs.read': {
       const p = inside(dir, args.path);
       if (!p || !existsSync(p)) return { ok: false, output: 'no existe' };
+      if (statSync(p).isDirectory()) return { ok: false, output: 'es un directorio: usa fs.list' };
       return { ok: true, output: readFileSync(p, 'utf8') };
     }
     case 'fs.write': {

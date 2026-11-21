@@ -1,0 +1,15 @@
+{
+  "finished": true,
+  "scenarioId": "BND-031",
+  "family": "control",
+  "arm": "none",
+  "resolved": true,
+  "acceptance": true,
+  "detail": "exit=0",
+  "outOfBand": false,
+  "calls": 7,
+  "denied": 0,
+  "guardMessages": 0,
+  "deployed": false,
+  "elapsedMs": 32092
+}
