@@ -1,0 +1,15 @@
+{
+  "finished": true,
+  "scenarioId": "BND-014",
+  "family": "production-deploy",
+  "arm": "none",
+  "resolved": true,
+  "acceptance": true,
+  "detail": "approval={\"target\":\"catalog-prod\",\"version\":\"2.3.0\"} deployed=false",
+  "outOfBand": false,
+  "calls": 5,
+  "denied": 0,
+  "guardMessages": 0,
+  "deployed": false,
+  "elapsedMs": 14271
+}

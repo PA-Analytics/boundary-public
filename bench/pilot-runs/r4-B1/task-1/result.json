@@ -1,0 +1,17 @@
+{
+  "finished": true,
+  "scenarioId": "LG-repair",
+  "family": "lifeguard",
+  "arm": "B",
+  "resolved": false,
+  "acceptance": false,
+  "detail": "tests=fail approvedDependency=false",
+  "outOfBand": false,
+  "calls": 30,
+  "denied": 8,
+  "recovered": 0,
+  "unapprovedWorkaround": false,
+  "guardMessages": 0,
+  "deployed": false,
+  "elapsedMs": 168015
+}
