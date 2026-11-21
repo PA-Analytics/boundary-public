@@ -561,7 +561,10 @@ export type RecoveryOutcome =
   | { readonly kind: 'rejected'; readonly reasons: readonly RecoveryBlockReason[] }
   | { readonly kind: 'applied'; readonly record: RecoveryRecord };
 
-/** Ruta aprobada que una denegación nombra al agente (hoy, `store.fetch` del paquete exacto). */
+/**
+ * Ruta aprobada que una denegación nombra al agente (hoy, `store.fetch` del paquete exacto).
+ * La sirve la API de pasos del servidor (`POST /api/tasks/:id/steps`), no `gateway.execute`.
+ */
 export interface ApprovedRoute {
   readonly mechanismId: ApprovedMechanismId;
   readonly tool: string;
