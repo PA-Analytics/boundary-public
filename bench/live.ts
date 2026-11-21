@@ -259,7 +259,8 @@ export async function runOnce(
     const ctx = gatewayContext(scope, "sandbox", nowIso(), POLICY_VERSION);
     if (routeCall) {
       const pre = gateway!.evaluate(request, ctx);
-      if (pre.criticalViolations.length > 0 || resolvePolicyDecision(pre) !== "deny" || approvedRouteFor(request) === null) {
+      // Con violación crítica se sigue al gateway, que lo bloquea sin ejecutar (blocked_terminal).
+      if (pre.criticalViolations.length === 0 && (resolvePolicyDecision(pre) !== "deny" || approvedRouteFor(request) === null)) {
         denied += 1;
         history.push({ tool: call.tool, args: call.args, outcome: "denied", detail: `${APPROVED_ROUTE_TOOL} no aplica a este paquete`, planStepId: call.planStepId });
         continue;
