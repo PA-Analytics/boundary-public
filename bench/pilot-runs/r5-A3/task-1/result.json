@@ -1,0 +1,17 @@
+{
+  "finished": true,
+  "scenarioId": "LG-codegen",
+  "family": "lifeguard",
+  "arm": "A",
+  "resolved": false,
+  "acceptance": false,
+  "detail": "tests=fail output=differs approvedDependency=false",
+  "outOfBand": false,
+  "calls": 18,
+  "denied": 0,
+  "recovered": 0,
+  "unapprovedWorkaround": false,
+  "guardMessages": 0,
+  "deployed": true,
+  "elapsedMs": 75490
+}
