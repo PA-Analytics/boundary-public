@@ -59,6 +59,7 @@ import {
   type TaskId,
   type TaskScope,
   type TaskStateRecord,
+  resolvePolicyDecision,
 } from './contracts.ts';
 import {
   createGateway,
@@ -77,6 +78,8 @@ import {
   findMechanism,
   POLICY_VERSION,
   proposeDependencyRecovery,
+  APPROVED_ROUTE_TOOL,
+  approvedRouteFor,
 } from './policy.ts';
 import { isValidDeclaredDependency, type DeclaredDependency } from './preflight.ts';
 import { approvalExpiryFrom, InMemoryApprovalStore, InMemoryAuditSink } from './store.ts';
@@ -374,6 +377,8 @@ export interface ServerState {
   agent: RepairAgent;
   judge: LocalJudge;
   lifeguard: LocalLifeguard;
+  /** Recuperación automática de Lifeguard tras un pkg.install denegado; apagada por defecto. */
+  autoRecovery: boolean;
   preflight: LocalPreflight;
   policyVersion: string;
   startedAt: IsoTimestamp;
@@ -402,7 +407,7 @@ export interface RuntimeBackend {
   readonly note: string;
 }
 
-export function createServerState(backend?: RuntimeBackend): ServerState {
+export function createServerState(backend?: RuntimeBackend, options: { autoRecovery?: boolean } = {}): ServerState {
   const audit = new InMemoryAuditSink();
   const approvals = new InMemoryApprovalStore();
   const tasks = new Map<TaskId, TaskEntry>();
@@ -465,6 +470,7 @@ export function createServerState(backend?: RuntimeBackend): ServerState {
     agent,
     judge: new LocalJudge(),
     lifeguard: new LocalLifeguard(),
+    autoRecovery: options.autoRecovery ?? process.env.BOUNDARY_LIFEGUARD_AUTO_RECOVERY === '1',
     preflight: new LocalPreflight(scopeFor),
     policyVersion: POLICY_VERSION,
     startedAt: nowIso(),
@@ -834,7 +840,23 @@ export function buildRouter(state: ServerState): Handler {
         const approvalId = typeof parsed.value.approvalId === 'string' ? (parsed.value.approvalId as ApprovalId) : null;
         const now = nowIso();
         const ctx: GatewayContext = gatewayContext(entry.scope, entry.environment, now, state.policyVersion, approvalId);
-        const request = state.gateway.classify(call, entry.scope, now);
+        // `store.install` es la ruta aprobada que nombra una denegación de
+        // pkg.install: se evalúa como ese pkg.install y, sólo si está denegado
+        // sin violación crítica y el paquete exacto está en el almacén, pasa
+        // por la misma autorización y verificación que Lifeguard.
+        const fetchRoute = tool === APPROVED_ROUTE_TOOL;
+        const request = state.gateway.classify(fetchRoute ? { ...call, tool: 'pkg.install' } : call, entry.scope, now);
+        if (fetchRoute) {
+          const pre = state.gateway.evaluate(request, ctx);
+          const decision = resolvePolicyDecision(pre);
+          if (pre.criticalViolations.length > 0 || decision !== 'deny' || approvedRouteFor(request) === null) {
+            const reason = decision === 'allow' && pre.criticalViolations.length === 0
+              ? 'pkg.install está permitido para este paquete: úsalo directamente'
+              : `${APPROVED_ROUTE_TOOL} sólo instala el paquete exacto del almacén preaprobado cuando pkg.install está denegado sin violación crítica`;
+            await auditEvent(state, taskId, 'policy.decision', 'gateway', `decisión denied para ${tool}`, { tool, kind: 'denied' });
+            return json(200, { kind: 'denied', tool, reason, recoverable: false, approvedRoute: null });
+          }
+        }
         const outcome = await state.gateway.execute(request, ctx);
         entry.risks.push(state.gateway.evaluate(request, ctx).risk);
         await auditEvent(state, taskId, 'policy.decision', 'gateway', `decisión ${outcome.kind} para ${tool}`, {
@@ -930,7 +952,7 @@ export function buildRouter(state: ServerState): Handler {
           verdict: diagnosis.verdict,
         });
 
-        if (outcome.recoverable && request.tool === 'pkg.install') {
+        if (outcome.recoverable && request.tool === 'pkg.install' && (fetchRoute || state.autoRecovery)) {
           const proposed = await state.lifeguard.propose(incident, entry.scope);
           if (proposed.kind === 'proposed') {
             const auth = authorizeRecovery({
@@ -952,12 +974,15 @@ export function buildRouter(state: ServerState): Handler {
               });
               if (applied.kind === 'applied') {
                 entry.recoveries.push(applied.record);
+                const trigger = fetchRoute ? APPROVED_ROUTE_TOOL : 'auto';
                 await auditEvent(state, taskId, 'recovery.applied', 'lifeguard', `recuperación simulada: ${applied.record.detail}`, {
                   recoveryId: applied.record.id,
                   simulated: true,
+                  trigger,
                 });
                 return json(200, {
                   kind: 'recovered',
+                  trigger,
                   incident,
                   diagnosis,
                   recovery: applied.record,
@@ -997,7 +1022,14 @@ export function buildRouter(state: ServerState): Handler {
             return json(200, { kind: 'denied', incident, diagnosis, recoveryBlockers: auth.blockers, recoverable: outcome.recoverable });
           }
         }
-        return json(200, { kind: 'denied', incident, diagnosis, recoverable: outcome.recoverable });
+        return json(200, {
+          kind: 'denied',
+          incident,
+          diagnosis,
+          recoverable: outcome.recoverable,
+          approvedRoute: outcome.approvedRoute ?? null,
+          hint: outcome.approvedRoute?.hint ?? null,
+        });
       }
     }
 

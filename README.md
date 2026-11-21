@@ -41,9 +41,14 @@ So the interesting failure is not a jailbreak. It is a task that stopped halfway
   blocked or stalled run, diagnoses the block, and delivers a suggestion into the worker channel so it
   can continue through a path the policy already allows. It never grants, escalates or removes a
   restriction. In live pilots the stall guard **never changed an outcome** (see Results).
-- **Approved-dependency recovery**: when an install is denied, Lifeguard can materialize a
-  pre-approved, hash-verified package. In round 6 a policy-gated manual install from the same store did as well,
-  so at the measured n the value is having an approved route, not Lifeguard itself (see Results).
+- **Denials name the approved route**: when the gateway denies an install and the exact `name@version` is in the
+  pre-approved, hash-verified store, the denial says so and names `store.install {name, version}`. That call goes
+  through the same policy re-check and hash verification as before, with no network. The pilots (rounds 6–7)
+  called this same route `store.fetch`; the product tool is named `store.install`.
+- **Lifeguard automatic recovery: off by default.** It is kept in the code (enable with
+  `BOUNDARY_LIFEGUARD_AUTO_RECOVERY=1`). In round 6 a documented manual route did as well as Lifeguard, and in
+  round 7, with no route disclosed, a denial that names the route also did as well (4/4 vs 4/4), so the denial
+  message became the default behaviour (see Results).
 
 ## Architecture
 
@@ -167,6 +172,8 @@ Formal verdict for that sprint: **INCONCLUSIVE** (1 repetition per cell, 0 gatew
   The detector never fired and is retired. What helped was an approved, hash-verified route: in round 6 a
   policy-gated manual `store.fetch` resolved 4/4 with fewer calls than Lifeguard's 4/4, so at this n Lifeguard
   showed no advantage over it. In rounds 4–5 the Lifeguard config was the only one with a legitimate route.
+  In round 7, with no route disclosed, a denial naming `store.fetch` resolved 4/4, the same as Lifeguard's 4/4
+  (n = 4 per arm: no advantage shown, not shown equal). Lifeguard recovery is therefore off by default.
   Least privilege (narrow exec, protected dependency folder) cut unsafe workarounds only directionally. One model, small n.
 - Live pilots used one agent model (Devin Lite). The results are directional, not significant.
 - The 200-scenario Gauntlet used during development is **not published**: it contains private

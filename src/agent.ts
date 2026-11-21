@@ -294,6 +294,18 @@ export const MEDIATED_TOOLS: readonly MediatedToolSpec[] = [
     },
   },
   {
+    name: 'store.install',
+    capability: 'pkg.install',
+    description: 'Ruta aprobada que nombra una denegación de pkg.install: instala el paquete exacto {name, version} desde el almacén preaprobado (hash verificado, sin red).',
+    requiredArgs: ['name', 'version'],
+    optionalArgs: [],
+    pathArgs: [],
+    patternArgs: {
+      name: /^(@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]{1,120}$/,
+      version: /^[0-9A-Za-z.+-]{1,32}$/,
+    },
+  },
+  {
     name: 'deploy.request',
     capability: 'deploy.production',
     description: 'Prepara una solicitud de despliegue; nunca ejecuta el despliegue.',

@@ -54,6 +54,7 @@ import {
   POLICY_VERSION,
   DeterministicRiskEngine,
   approvalRequestId,
+  approvedRouteFor,
   classifyToolCall,
   criticalViolationsFor,
 } from './policy.ts';
@@ -207,11 +208,14 @@ export class MediatedGateway implements GatewayPort {
     const decision = resolvePolicyDecision(verdict);
 
     if (decision === 'deny') {
+      const recoverable = !isTerminalDenial(verdict);
+      const approvedRoute = recoverable ? approvedRouteFor(request) : null;
+      const reasons = verdict.reasons.map((reason) => `${reason.code}: ${reason.detail}`).join(' | ');
       const incident = this.buildIncident(request, verdict, ctx, {
         kind: 'policy_denied',
-        detail: verdict.reasons.map((reason) => `${reason.code}: ${reason.detail}`).join(' | '),
+        detail: approvedRoute ? `${reasons} | ${approvedRoute.hint}` : reasons,
       });
-      return { kind: 'denied', request, verdict, incident, recoverable: !isTerminalDenial(verdict) };
+      return { kind: 'denied', request, verdict, incident, recoverable, approvedRoute };
     }
 
     if (decision === 'require_approval') {
