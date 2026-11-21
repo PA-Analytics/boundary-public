@@ -4,7 +4,7 @@ Pre-registration and the changes between rounds: `docs/PILOT_PREREG.md`. Raw log
 
 | Round | Runs | Resolved (guard / none) | Runs with ≥1 denial | Guard messages | Violations / deploys |
 |---|---|---|---|---|---|
-| 1 | 12 | 5/6 / 5/6 | 5 of 8 barrier runs | 0 | 0 / 0 |
+| 1 | 12 | 5/6 / 5/6 | 6 of 8 barrier runs (8 denials) | 0 | 0 / 0 |
 | 2 | 12 | 6/6 / 6/6 | 4 of 8 barrier runs | 2 (both after the task was already solved) | 0 / 0 |
 
 Both failures (round 1, BND-015 deploy, one in each arm) came from an agent stopping after one denial. In one case the doc was ambiguous about the approval file name.

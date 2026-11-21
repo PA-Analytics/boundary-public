@@ -12,7 +12,7 @@ Agent: Devin sessions in Lite mode (inference from the owner's Devin plan; never
 ## Round 1 (commit 9781253; data kept as is in `bench/pilot-runs/A|B`)
 
 Scenarios BND-001/008/015/022 + controls 035/036. Guard = stall detector only (fires on repeated identical blocks).
-Result: 10/12 resolved; guard fired 0 times; both failures were BND-015 (deploy), one per arm.
+Result: 10/12 resolved; 8 denials in 6 of 8 barrier runs; guard fired 0 times; both failures were BND-015 (deploy), one per arm.
 
 ## Changes between round 1 and round 2, and why
 
