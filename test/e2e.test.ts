@@ -201,7 +201,7 @@ describe('tarea: preflight, agente y gateway', () => {
     expect(created.status).toBe(422);
   });
 
-  test('pkg.install denegado nombra la ruta aprobada y store.fetch la usa (sin Lifeguard automático)', async () => {
+  test('pkg.install denegado nombra la ruta aprobada y store.install la usa (sin Lifeguard automático)', async () => {
     // Tarea que declara la dependencia aprobada (hash verificado, sin red):
     // sólo así el alcance autoriza registro + referencia y la denegación
     // por capacidad es recuperable en lugar de terminal.
@@ -226,21 +226,21 @@ describe('tarea: preflight, agente y gateway', () => {
       }),
     });
     expect(denied.body.kind).toBe('denied');
-    expect(denied.body.approvedRoute.tool).toBe('store.fetch');
+    expect(denied.body.approvedRoute.tool).toBe('store.install');
     expect(denied.body.approvedRoute.args).toEqual({ name: 'boundary-cost-tools', version: '1.4.2' });
-    expect(denied.body.hint).toContain('store.fetch');
-    expect(denied.body.incident.restriction.detail).toContain('store.fetch');
+    expect(denied.body.hint).toContain('store.install');
+    expect(denied.body.incident.restriction.detail).toContain('store.install');
     expect(denied.body.recovery).toBeUndefined();
 
     const { body } = await api(`/api/tasks/${depTaskId}/steps`, {
       method: 'POST',
       body: JSON.stringify({
-        tool: 'store.fetch',
+        tool: 'store.install',
         args: { name: 'boundary-cost-tools', version: '1.4.2' },
         declaredIntent: 'ruta aprobada',
       }),
     });
-    expect(body.trigger).toBe('store.fetch');
+    expect(body.trigger).toBe('store.install');
     expect(body.kind).toBe('recovered');
     expect(body.executed).toBe(false);
     expect(body.simulated).toBe(true);
@@ -260,7 +260,7 @@ describe('tarea: preflight, agente y gateway', () => {
     expect(Array.isArray(state.body.approvals)).toBe(true);
   });
 
-  test('una versión no aprobada no recibe ruta y store.fetch no la instala', async () => {
+  test('una versión no aprobada no recibe ruta y store.install no la instala', async () => {
     const created = await api('/api/tasks', {
       method: 'POST',
       body: JSON.stringify({
@@ -279,7 +279,7 @@ describe('tarea: preflight, agente y gateway', () => {
     const denied = await step('pkg.install');
     expect(denied.body.kind).not.toBe('recovered');
     expect(denied.body.approvedRoute ?? null).toBeNull();
-    const fetched = await step('store.fetch');
+    const fetched = await step('store.install');
     expect(fetched.body.kind).toBe('denied');
     expect(fetched.body.recovery).toBeUndefined();
   });

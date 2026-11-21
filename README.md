@@ -42,8 +42,9 @@ So the interesting failure is not a jailbreak. It is a task that stopped halfway
   can continue through a path the policy already allows. It never grants, escalates or removes a
   restriction. In live pilots the stall guard **never changed an outcome** (see Results).
 - **Denials name the approved route**: when the gateway denies an install and the exact `name@version` is in the
-  pre-approved, hash-verified store, the denial says so and names `store.fetch {name, version}`. That call goes
-  through the same policy re-check and hash verification as before, with no network.
+  pre-approved, hash-verified store, the denial says so and names `store.install {name, version}`. That call goes
+  through the same policy re-check and hash verification as before, with no network. The pilots (rounds 6–7)
+  called this same route `store.fetch`; the product tool is named `store.install`.
 - **Lifeguard automatic recovery: off by default.** It is kept in the code (enable with
   `BOUNDARY_LIFEGUARD_AUTO_RECOVERY=1`). In round 6 a documented manual route did as well as Lifeguard, and in
   round 7, with no route disclosed, a denial that names the route also did as well (4/4 vs 4/4), so the denial

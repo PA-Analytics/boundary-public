@@ -422,6 +422,12 @@ describe('catálogo cerrado: nada de llamadas directas al host', () => {
     expect(resolveWorkspacePath(REPO, '../fuera')).toBeNull();
   });
 
+  test('el agente puede llamar a la ruta aprobada store.install', () => {
+    expect(findMediatedTool('store.install')?.capability).toBe('pkg.install');
+    expect(validateAgentToolCall('store.install', { name: 'boundary-cost-tools', version: '1.4.2' }, REPO)).toBeNull();
+    expect(validateAgentToolCall('store.install', { name: 'boundary-cost-tools' }, REPO)).not.toBeNull();
+  });
+
   test('validateAgentToolCall rechaza comandos, secretos y herramientas desconocidas', () => {
     expect(validateAgentToolCall('fs.read', { path: 'index.js' }, REPO)).toBeNull();
     expect(validateAgentToolCall('fs.read', { path: '/etc/passwd' }, REPO)).toContain('ruta');

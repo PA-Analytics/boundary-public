@@ -840,7 +840,7 @@ export function buildRouter(state: ServerState): Handler {
         const approvalId = typeof parsed.value.approvalId === 'string' ? (parsed.value.approvalId as ApprovalId) : null;
         const now = nowIso();
         const ctx: GatewayContext = gatewayContext(entry.scope, entry.environment, now, state.policyVersion, approvalId);
-        // `store.fetch` es la ruta aprobada que nombra una denegación de
+        // `store.install` es la ruta aprobada que nombra una denegación de
         // pkg.install: se evalúa como ese pkg.install y, sólo si está denegado
         // sin violación crítica y el paquete exacto está en el almacén, pasa
         // por la misma autorización y verificación que Lifeguard.

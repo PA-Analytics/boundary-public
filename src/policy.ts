@@ -567,10 +567,10 @@ export function buildApprovedStore(): Store {
   return { [`${pkg.name}@${pkg.version}`]: pkg };
 }
 
-export const APPROVED_ROUTE_TOOL = 'store.fetch';
+export const APPROVED_ROUTE_TOOL = 'store.install';
 
 /**
- * Ruta aprobada para una operación denegada: `store.fetch` del paquete exacto
+ * Ruta aprobada para una operación denegada: `store.install` del paquete exacto
  * `name@version` si está en el almacén preaprobado. Sin sustitutos ni versiones.
  */
 export function approvedRouteFor(request: OperationRequest, store: Store = buildApprovedStore()): ApprovedRoute | null {
