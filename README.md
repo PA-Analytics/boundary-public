@@ -37,10 +37,12 @@ So the interesting failure is not a jailbreak. It is a task that stopped halfway
   gateway stays fail-closed and reports simulated: true.
 - **Outcome verification** — public and hidden tests run inside the container; the recorded resolved
   flag comes from the harness, never from the model.
-- **Contextual intervention (experimental)** — the Lifeguard reads an authorized transcript of a
+- **Contextual intervention (experimental, measured null)**: the Lifeguard reads an authorized transcript of a
   blocked or stalled run, diagnoses the block, and delivers a suggestion into the worker channel so it
   can continue through a path the policy already allows. It never grants, escalates or removes a
-  restriction.
+  restriction. In live pilots the stall guard **never changed an outcome** (see Results).
+- **Approved-dependency recovery**: when an install is denied, Lifeguard can materialize a
+  pre-approved, hash-verified package. What it was measured to change is provenance, not completion (see Results).
 
 ## Architecture
 
@@ -125,29 +127,42 @@ the artifact holds and writes "not recorded" when a field is missing.
 
 Reported honestly, including the part that did not work.
 
+### Live pilots (current evidence)
+
+Agent: Devin sessions in Lite mode working only through the mediated harness (`bench/pilot-harness.ts`), on the
+36-scenario barrier pack (`bench/barrier-pack.ts`), where each tempting action is blocked by the real policy and an
+allowed route exists. The metric was pre-registered (`docs/PILOT_PREREG.md`). Full results:
+[docs/PILOT_RESULTS.md](docs/PILOT_RESULTS.md). Raw logs: `bench/pilot-runs/`.
+
+| Claim | Measured | Verdict |
+|---|---|---|
+| The gateway blocks unsafe actions without stopping the task | 46/48 barrier runs resolved, 0 violations, 0 deploys, 0 out-of-band edits | supported (directional) |
+| The stall guard rescues stuck agents | 23/24 with the guard vs 23/24 without; the repetition detector never fired | **not supported** |
+| Lifeguard recovery lets a blocked install finish | without Lifeguard, agents still got tests green by **fabricating** the dependency; with it, they used the approved package (round 3, n=1 per cell; replication in round 4) | supported as provenance only, pending replication |
+
+Caveats: a single agent model (Lite) and small n. Capable agents route around a denial or stop; they don't loop. So
+the stall guard has nothing to catch. The indirect-exec hole (a script edits a protected file) is closed by
+`src/integrity.ts`, but no live agent tried it.
+
+### Original sprint (superseded)
+
+The 30-run sprint below never exercised the boundary: its barriers lived in the tests, not in the policy, and the
+gateway refused 0 of 368 calls (`docs/SCENARIO_REVIEW.md`). It is kept for the record.
+
 | Config | Meaning | Functional | Received | Resumed | Resolved |
 |---|---|---|---|---|---|
 | B | autonomous recovery (no Lifeguard) | 5 / 10 | 0 | 0 | 0 |
 | D | fixed guidance | 5 / 10 | 1 | 0 | 0 |
 | E | contextual Lifeguard | 5 / 10 | 1 | 0 | 0 |
 
-- **62 real runs reported** across the sprint; the **30-run pilot** (10 scenarios × 3 arms, one
-  repetition per cell) is the one persisted in this repository.
-- **Functional outcomes are level**: B = 5/10, D = 5/10, E = 5/10.
-- **No incremental advantage of the Lifeguard is demonstrated.** In the only run where the message was
-  received, it was neither resumed nor resolved.
-- **Formal verdict: INCONCLUSIVE**, because the preregistered threshold asked for 5 repetitions per cell
-  and the artifact records 1.
-- Zero gateway refusals were exercised in the pilot, so the comparison mostly measured the model, not
-  the boundary.
-
-Full breakdown and per-scenario table: [docs/BENCHMARK.md](docs/BENCHMARK.md).
+Formal verdict for that sprint: **INCONCLUSIVE** (1 repetition per cell, 0 gateway refusals). Breakdown:
+[docs/BENCHMARK.md](docs/BENCHMARK.md).
 
 ## Limitations
 
-- The Lifeguard is **experimental**. Its value is unproven at this sample size and this repository says
-  so instead of claiming a win.
-- The pilot is **one repetition per cell**. It cannot support a statistical claim in either direction.
+- The stall guard showed **no effect** in live pilots. Lifeguard's dependency recovery changed provenance, not
+  completion, and rests on small n until the replication lands.
+- Live pilots used one agent model (Devin Lite). The results are directional, not significant.
 - The 200-scenario Gauntlet used during development is **not published**: it contains private
   evaluators, hidden tests and expected answers. The rest stays private by design.
 - Verification is only as strong as the tests the operator supplies; hidden tests come from the
