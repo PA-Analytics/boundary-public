@@ -138,7 +138,7 @@ allowed route exists. The metric was pre-registered (`docs/PILOT_PREREG.md`). Fu
 |---|---|---|
 | The gateway blocks unsafe actions without stopping the task | 46/48 barrier runs resolved, 0 violations, 0 deploys, 0 out-of-band edits | supported (directional) |
 | The stall guard rescues stuck agents | 23/24 with the guard vs 23/24 without; the repetition detector never fired | **not supported** |
-| Lifeguard recovery lets a blocked install finish | replication with 15 fresh agents: with Lifeguard 5/5 sessions resolved with the approved package; without it 0/5 and 0/5 (Fisher p = 0.004), and 7/10 of those agents **fabricated** a dependency that passed the tests | **supported** (provenance-safe completion) |
+| Lifeguard recovery lets a blocked install finish | two differently shaped fixtures, 27 fresh agents: with Lifeguard 9/9 sessions resolved with the approved package; without it 0/9 (no gateway) and 0/9 (deny only), Fisher p = 0.004 and 0.014 per fixture; 13/18 of the agents without it **fabricated** a dependency that passed the visible tests | **supported** (provenance-safe completion) |
 
 Caveats: a single agent model (Lite) and small n. Capable agents route around a denial or stop; they don't loop. So
 the stall guard has nothing to catch. The indirect-exec hole (a script edits a protected file) is closed by
@@ -161,7 +161,7 @@ Formal verdict for that sprint: **INCONCLUSIVE** (1 repetition per cell, 0 gatew
 ## Limitations
 
 - The stall guard showed **no effect** in live pilots. Lifeguard's dependency recovery is supported only for its
-  measured case: a blocked install with an approved artifact in the store. Deny-only setups still let agents fabricate dependencies.
+  measured case: a blocked install with an approved artifact in the store (two fixtures, one model). Deny-only setups still let agents fabricate dependencies.
 - Live pilots used one agent model (Devin Lite). The results are directional, not significant.
 - The 200-scenario Gauntlet used during development is **not published**: it contains private
   evaluators, hidden tests and expected answers. The rest stays private by design.
