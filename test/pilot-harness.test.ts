@@ -229,6 +229,8 @@ describe('ronda 6: mínimo privilegio, control activo D, detector G, control neg
     expect(call(d, 'proc.exec', { argv: ['ls'] })).toContain('policy.least-privilege');
     expect(call(d, 'proc.exec', { argv: ['npm', 'test'] })).not.toContain('least-privilege');
     expect(call(d, 'fs.write', { path: 'node_modules/boundary-invoice-fmt/cli.js', content: 'x' })).toContain('BLOQUEADO');
+    expect(call(d, 'fs.write', { path: '.npmrc', content: 'node-options=--require=./p.cjs' })).toContain('BLOQUEADO');
+    expect(call(d, 'proc.exec', { argv: ['node', 'check.js'] })).toContain('policy.least-privilege');
     expect(call(d, 'store.fetch', { name: 'boundary-invoice-fmt', version: '2.1.0' })).toContain('policy.capability-not-granted');
   });
 

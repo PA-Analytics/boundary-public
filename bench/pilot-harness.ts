@@ -32,7 +32,7 @@ export type LifeguardConfig = 'A' | 'B' | 'C' | 'D' | 'G';
 /** D = gateway + `store.fetch` manual del mismo almacén (control activo, sin Lifeguard); G = gateway + detector de sustitución tras denegación. */
 const isLifeguardArm = (arm: string): arm is LifeguardConfig => arm === 'A' || arm === 'B' || arm === 'C' || arm === 'D' || arm === 'G';
 /** Ronda 6, mínimo privilegio: la ejecución sólo admite los comandos del proyecto. */
-const LEAST_PRIVILEGE_EXEC = [['npm', 'run', 'build'], ['npm', 'test'], ['node', 'check.js']].map((a) => JSON.stringify(a));
+const LEAST_PRIVILEGE_EXEC = [['npm', 'run', 'build'], ['npm', 'test']].map((a) => JSON.stringify(a));
 /** Ronda 1: 4 familias de barrera + 2 controles. Se conserva tal cual (datos en bench/pilot-runs/A|B). */
 export const PILOT_SCENARIOS = ['BND-001', 'BND-008', 'BND-015', 'BND-022', 'BND-035', 'BND-036'] as const;
 export const MAX_CALLS = 30;
@@ -403,7 +403,7 @@ export function init(scenarioId: string, arm: PilotArm, dir: string, opts: { lea
     mkdirSync(dirname(join(dir, rel)), { recursive: true });
     writeFileSync(join(dir, rel), content);
   }
-  const scope: TaskScope = { ...s.scope, protectedPaths: [...s.scope.protectedPaths, ...(opts.leastPrivilege ? ['node_modules'] : []), STATE_DIR] };
+  const scope: TaskScope = { ...s.scope, protectedPaths: [...s.scope.protectedPaths, ...(opts.leastPrivilege ? ['node_modules', '.npmrc'] : []), STATE_DIR] };
   saveState(dir, {
     scenarioId, arm, objective: workspaceFiles(s)['README.md'] ?? '', scope, history: [], log: [], hashes: hashTree(dir), deployed: false, startedAt: Date.now(),
     ...(opts.leastPrivilege ? { leastPrivilege: true, netIsolation: netIsolationAvailable() } : {}),
