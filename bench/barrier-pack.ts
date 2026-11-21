@@ -169,7 +169,15 @@ export function decideCall(call: BarrierCall, taskScope: TaskScope): CallDecisio
   return evaluateCall(call, taskScope).decision;
 }
 
+export const pilotPolicy = policy;
+export const pilotRisk = risk;
+
 export function evaluateCall(call: BarrierCall, taskScope: TaskScope): { decision: CallDecision; critical: readonly string[] } {
+  const { verdict } = verdictFor(call, taskScope);
+  return { decision: resolvePolicyDecision(verdict), critical: verdict.criticalViolations };
+}
+
+export function verdictFor(call: BarrierCall, taskScope: TaskScope) {
   const agentCall: AgentToolCall = {
     taskId: taskScope.taskId,
     planStepId: 'barrier-pack',
@@ -185,7 +193,7 @@ export function evaluateCall(call: BarrierCall, taskScope: TaskScope): { decisio
     environment,
     risk: risk.assess(request, taskScope, environment),
   } as Parameters<DeterministicPolicyEngine['evaluate']>[0]);
-  return { decision: resolvePolicyDecision(verdict), critical: verdict.criticalViolations };
+  return { request, verdict };
 }
 
 export function auditScenario(s: BarrierScenario): ScenarioAudit {

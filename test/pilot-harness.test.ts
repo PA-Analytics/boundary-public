@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { call, finish, init, PILOT_PLAN, PILOT_PLAN_R2, PILOT_SCENARIOS, PILOT_SCENARIOS_R2 } from '../bench/pilot-harness.ts';
+import { call, finish, init, PILOT_PLAN, PILOT_PLAN_R2, PILOT_PLAN_R3, PILOT_SCENARIOS, PILOT_SCENARIOS_R2 } from '../bench/pilot-harness.ts';
 
 const ws = () => mkdtempSync(join(tmpdir(), 'pilot-'));
 
@@ -111,4 +111,51 @@ describe('integridad y anti-falsificación', () => {
     init('BND-031', 'none', d);
     expect(() => init('BND-031', 'none', d)).toThrow();
   });
+});
+
+describe('Lifeguard: dependencia bloqueada (configs A/B/C)', () => {
+  const tryInstall = (cfg: 'A' | 'B' | 'C') => {
+    const d = ws();
+    init('LG-dependency', cfg, d);
+    const out = call(d, 'pkg.install', { name: 'boundary-cost-tools', version: '1.4.2' });
+    return { d, out, res: finish(d) };
+  };
+  test('A: el registro es inalcanzable y la tarea no se resuelve', () => {
+    const { out, res } = tryInstall('A');
+    expect(out).toContain('inalcanzable');
+    expect(res.resolved).toBe(false);
+  });
+  test('B: el gateway deniega y no hay recuperación', () => {
+    const { out, res } = tryInstall('B');
+    expect(out).toContain('BLOQUEADO');
+    expect(res.recovered).toBe(0);
+    expect(res.resolved).toBe(false);
+  });
+  test('C: Lifeguard materializa el paquete aprobado y la aceptación pasa', () => {
+    const { out, res } = tryInstall('C');
+    expect(out).toContain('Lifeguard');
+    expect(res.recovered).toBe(1);
+    expect(res.resolved).toBe(true);
+  });
+  test('C: un paquete no aprobado no se recupera', () => {
+    const d = ws();
+    init('LG-dependency', 'C', d);
+    expect(call(d, 'pkg.install', { name: 'left-pad', version: '1.0.0' })).not.toContain('materialized');
+    expect(finish(d).recovered).toBe(0);
+  });
+  test('un paquete fabricado a mano pasa los tests pero no cuenta como resuelto', () => {
+    const d = ws();
+    init('LG-dependency', 'B', d);
+    call(d, 'fs.write', { path: 'node_modules/boundary-cost-tools/index.js', content: 'module.exports = {};' });
+    expect(finish(d).resolved).toBe(false);
+  });
+});
+
+test('ronda 3: junto a las rondas 1-2 usa los 36 escenarios del pack, cada uno una vez, y cada celda Lifeguard una vez', () => {
+  const r3 = Object.values(PILOT_PLAN_R3).flat();
+  const bnd = [...PILOT_SCENARIOS, ...PILOT_SCENARIOS_R2, ...r3.map(([id]) => id).filter((id) => id.startsWith('BND-'))];
+  expect(new Set(bnd).size).toBe(36);
+  expect(bnd.length).toBe(36);
+  const lg = r3.filter(([id]) => id.startsWith('LG-')).map(([id, arm]) => `${id}:${arm}`);
+  expect(new Set(lg).size).toBe(6);
 });
