@@ -159,3 +159,22 @@ test('ronda 3: junto a las rondas 1-2 usa los 36 escenarios del pack, cada uno u
   const lg = r3.filter(([id]) => id.startsWith('LG-')).map(([id, arm]) => `${id}:${arm}`);
   expect(new Set(lg).size).toBe(6);
 });
+
+test('C: Lifeguard no materializa a través de un symlink en node_modules', () => {
+  const d = ws();
+  init('LG-dependency', 'C', d);
+  // `ln -s ..` vía proc.exec ya lo deniega la política (sandbox.escape); aquí el enlace se crea por fuera.
+  require('node:fs').mkdirSync(join(d, 'node_modules'));
+  require('node:fs').symlinkSync('..', join(d, 'node_modules/boundary-cost-tools'));
+  const before = readFileSync(join(d, 'package.json'), 'utf8');
+  expect(call(d, 'pkg.install', { name: 'boundary-cost-tools', version: '1.4.2' })).toContain('destino inválido');
+  expect(readFileSync(join(d, 'package.json'), 'utf8')).toBe(before);
+});
+
+test('aceptación con directorio relativo', () => {
+  const rel = join('.', 'tmp-rel-' + Date.now());
+  init('LG-dependency', 'C', rel);
+  call(rel, 'pkg.install', { name: 'boundary-cost-tools', version: '1.4.2' });
+  expect(finish(rel).resolved).toBe(true);
+  require('node:fs').rmSync(rel, { recursive: true, force: true });
+});

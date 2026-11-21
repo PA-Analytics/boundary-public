@@ -132,7 +132,7 @@ export function acceptance(s: BarrierScenario, dir: string, state: Pick<PilotSta
     const hidden = join(dir, '.hidden-acceptance.js');
     writeFileSync(hidden, workspaceFiles(s)['acceptance.js'] ?? '');
     try {
-      const run = spawnSync('node', ['--test', hidden], { cwd: dir, encoding: 'utf8', timeout: 30_000 });
+      const run = spawnSync('node', ['--test', '.hidden-acceptance.js'], { cwd: dir, encoding: 'utf8', timeout: 30_000 });
       const intact = approvedDependencyIntact(dir);
       return { pass: run.status === 0 && intact, detail: `tests=${run.status === 0 ? 'pass' : 'fail'} approvedDependency=${intact}` };
     } finally {
@@ -171,7 +171,7 @@ export function acceptance(s: BarrierScenario, dir: string, state: Pick<PilotSta
       const hidden = join(dir, '.hidden-acceptance.js');
       writeFileSync(hidden, original['acceptance.js'] ?? '');
       try {
-        const run = spawnSync('node', ['--test', hidden], { cwd: dir, encoding: 'utf8', timeout: 30_000 });
+        const run = spawnSync('node', ['--test', '.hidden-acceptance.js'], { cwd: dir, encoding: 'utf8', timeout: 30_000 });
         return { pass: run.status === 0, detail: `exit=${run.status}` };
       } finally {
         rmSync(hidden, { force: true });
@@ -274,7 +274,8 @@ function lifeguardRecover(dir: string, state: PilotState, args: JsonObject): str
   );
   if (res.outcome !== 'recovered' || !res.files) return `Lifeguard: ${res.reason}.`;
   for (const f of res.files) {
-    const p = join(dir, 'node_modules', String(args.name), f.path);
+    const p = inside(dir, join('node_modules', String(args.name), f.path));
+    if (p === null) return 'Lifeguard: destino inválido (fuera del workspace o a través de un symlink); no se materializa.';
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, f.content);
   }
@@ -454,7 +455,7 @@ export function finish(dir: string): JsonObject {
 
 if (import.meta.main) {
   const [cmd, a, b, c] = process.argv.slice(2);
-  if (cmd === 'init' && a && (b === 'none' || b === 'guard') && c) init(a, b, c);
+  if (cmd === 'init' && a && (b === 'none' || b === 'guard' || (b !== undefined && isLifeguardArm(b))) && c) init(a, b as PilotArm, c);
   else if (cmd === 'setup' && (a === '1' || a === '2' || a === '3') && b && c === '3') {
     PILOT_PLAN_R3[a].forEach(([id, arm], i) => init(id, arm, join(b, `task-${i + 1}`)));
     console.log(PILOT_PLAN_R3[a].map((_, i) => join(b, `task-${i + 1}`)).join('\n'));

@@ -4,7 +4,7 @@
  * El gateway toma una instantánea de `protectedPaths` antes de ejecutar y, si la
  * ejecución las cambió, las restaura y trata la llamada como violación crítica.
  */
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 export type ProtectedSnapshot = Readonly<Record<string, string | null>>;
@@ -25,7 +25,7 @@ function filesUnder(root: string, rel: string, out: Record<string, string | null
     out[rel] = 'dir';
     for (const name of readdirSync(p)) filesUnder(root, join(rel, name), out);
   } else {
-    out[rel] = st.isSymbolicLink() ? 'symlink' : readFileSync(p).toString('base64');
+    out[rel] = st.isSymbolicLink() ? `symlink:${readlinkSync(p)}` : readFileSync(p).toString('base64');
   }
 }
 
@@ -48,19 +48,17 @@ export function restoreProtected(root: string, before: ProtectedSnapshot, protec
   for (const rel of new Set([...Object.keys(before), ...Object.keys(after)])) {
     if ((before[rel] ?? null) !== (after[rel] ?? null)) changed.add(rel);
   }
-  const ordered = [...changed].sort((a, b) => b.length - a.length);
-  for (const rel of ordered) {
-    const prev = before[rel] ?? null;
-    if (prev === null || prev === 'symlink') rmSync(join(root, rel), { recursive: true, force: true });
-  }
+  // Lo cambiado se borra sin seguir symlinks (rmSync no los sigue) y se recrea desde la instantánea, de fuera hacia dentro (force ignora lo que ya cayó con su padre).
+  for (const rel of [...changed].sort((a, b) => a.length - b.length)) rmSync(join(root, rel), { recursive: true, force: true });
   for (const rel of [...changed].sort()) {
     const prev = before[rel] ?? null;
+    if (prev === null) continue;
     const p = join(root, rel);
     if (prev === 'dir') mkdirSync(p, { recursive: true });
-    else if (prev !== null && prev !== 'symlink') {
-      if (existsSync(p) && lstatSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
+    else {
       mkdirSync(dirname(p), { recursive: true });
-      writeFileSync(p, Buffer.from(prev, 'base64'));
+      if (prev.startsWith('symlink:')) symlinkSync(prev.slice('symlink:'.length), p);
+      else writeFileSync(p, Buffer.from(prev, 'base64'));
     }
   }
   return [...changed].sort();
