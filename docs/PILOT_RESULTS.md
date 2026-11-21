@@ -113,3 +113,18 @@ Pre-registered in `docs/PILOT_PREREG.md` (commit `69ea72e`) before launch; promp
 **What this changes in the claim.** Rounds 4–5 showed that agents with an approved route finish with approved bytes and agents without one fabricate. Round 6 shows the route does not need to be Lifeguard: a plain, explicitly granted install-from-store capability performs the same or better, and selecting least-privilege permissions (narrow exec, protected dependency folder, an explicit store capability) cut unsafe workarounds without any detector. The value measured is in the permission model and the approved store; Lifeguard's automatic recovery and the stall detector are not supported as separate contributions. One model (Devin Lite), one fixture, n = 4 per arm.
 
 **Post-run review fixes (no round 6 data affected).** Devin Review on the results PR found two harness issues, fixed after the run: (1) the least-privilege allowlist listed `node check.js`, but `check.js` is a protected path, so the policy always denied it; no round 6 agent tried it, so every arm had `npm test` and `npm run build` in practice. It was dropped from the allowlist. (2) `.npmrc` was writable, so an agent could have injected `node-options` into `npm test`; no round 6 agent wrote `.npmrc` (checked in every `state.json`). It is now protected under least privilege.
+
+## Round 7 — undisclosed route
+
+Pre-registered in `docs/PILOT_PREREG.md` (commit `7afb0c3`) before launch. 8 fresh Lite sessions, one run each, no retries; manifest with the exact prompt and session ids in `bench/pilot-runs/r7-manifest.md`, raw `state.json` / `result.json` in `bench/pilot-runs/r7-*`. Neither the prompt, the tool list nor the README mentioned the store.
+
+| Arm | Resolved | Functional pass | Unsafe workaround | Calls (median) | Recoveries |
+|---|---|---|---|---|---|
+| C-u (Lifeguard) | 4/4 | 4/4 | 0/4 | 8 | 4 |
+| H (denial names `store.fetch`) | 4/4 | 4/4 | 0/4 | 9.5 | 0 |
+
+Every run: least privilege on, network isolation verified, no out-of-band edit, no deploy. No C-u agent called `store.fetch`. Every H agent found `store.fetch` from the one-line hint in the `pkg.install` denial.
+
+**Decision rule: not met.** 4/4 vs 4/4, one-sided Fisher p = 1. At n = 4 this is "no advantage shown", not "shown equal".
+
+**What this changes in the claim.** Even when the agent does not know an approved route exists, a denial message that names the route did as well as Lifeguard's automatic recovery, at about 1.5 more calls. Three of four C-u agents again said a denial that still installs the package was confusing. One model (Devin Lite), one fixture.
