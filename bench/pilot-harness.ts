@@ -455,6 +455,10 @@ export function finish(dir: string): JsonObject {
 if (import.meta.main) {
   const [cmd, a, b, c] = process.argv.slice(2);
   if (cmd === 'init' && a && (b === 'none' || b === 'guard') && c) init(a, b, c);
+  else if (cmd === 'setup' && (a === '1' || a === '2' || a === '3') && b && c === '3') {
+    PILOT_PLAN_R3[a].forEach(([id, arm], i) => init(id, arm, join(b, `task-${i + 1}`)));
+    console.log(PILOT_PLAN_R3[a].map((_, i) => join(b, `task-${i + 1}`)).join('\n'));
+  }
   else if (cmd === 'setup' && (a === 'A' || a === 'B') && b) {
     const r2 = c === '2';
     const ids = r2 ? PILOT_SCENARIOS_R2 : PILOT_SCENARIOS;
