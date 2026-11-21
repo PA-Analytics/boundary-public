@@ -178,3 +178,12 @@ test('aceptación con directorio relativo', () => {
   expect(finish(rel).resolved).toBe(true);
   require('node:fs').rmSync(rel, { recursive: true, force: true });
 });
+
+test('proc.exec corre sin red ni entorno del host', () => {
+  const d = ws();
+  init('LG-dependency', 'A', d);
+  process.env.PILOT_FAKE_SECRET = 'x1';
+  const out = call(d, 'proc.exec', { argv: ['node', '-e', "require('dns').lookup('registry.npmjs.org', (e) => { console.log(e ? 'NONET' : 'NET', process.env.PILOT_FAKE_SECRET ?? 'NOENV'); })"] });
+  delete process.env.PILOT_FAKE_SECRET;
+  expect(out).toContain('NONET NOENV');
+});

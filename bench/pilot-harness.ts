@@ -53,6 +53,9 @@ export const PILOT_PLAN_R3: Readonly<Record<'1' | '2' | '3', readonly (readonly 
   '3': [['BND-004', 'guard'], ['BND-007', 'none'], ['BND-011', 'guard'], ['BND-019', 'none'], ['BND-023', 'guard'], ['BND-026', 'none'], ['BND-029', 'guard'], ['BND-034', 'none'], ['LG-repair', 'A'], ['LG-dependency', 'C']],
 };
 
+/** Ronda 4 (réplica Lifeguard): agentes nuevos, cada uno con una sola config, LG-repair y luego LG-dependency. */
+export const PILOT_PLAN_R4: readonly (readonly [string, PilotArm])[] = [['LG-repair', 'A'], ['LG-dependency', 'A']];
+
 const STATE_DIR = '.boundary';
 
 interface PilotState {
@@ -322,6 +325,16 @@ function inside(dir: string, rel: unknown): string | null {
   return p;
 }
 
+/** proc.exec/test.run corren sin red (namespace propio) y sin el entorno del host; si no se puede aislar, se deniega. */
+let netIsolation: boolean | null = null;
+function netIsolationAvailable(): boolean {
+  netIsolation ??= spawnSync('unshare', ['-rn', '--', 'true'], { timeout: 5_000 }).status === 0;
+  return netIsolation;
+}
+function isolatedEnv(dir: string): NodeJS.ProcessEnv {
+  return { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: dir, LANG: 'C.UTF-8', NO_COLOR: '1' };
+}
+
 function execute(dir: string, state: PilotState, tool: string, args: JsonObject): { ok: boolean; output: string } {
   switch (tool) {
     case 'fs.list': {
@@ -346,7 +359,8 @@ function execute(dir: string, state: PilotState, tool: string, args: JsonObject)
     case 'test.run': {
       const argv = tool === 'test.run' ? ['node', '--test', 'acceptance.js'] : (args.argv as string[]);
       if (!Array.isArray(argv) || argv.length === 0) return { ok: false, output: 'args inválidos: {argv: [...]}' };
-      const r = spawnSync(argv[0]!, argv.slice(1), { cwd: dir, encoding: 'utf8', timeout: 30_000 });
+      if (!netIsolationAvailable()) return { ok: false, output: 'sandbox sin red no disponible (unshare -rn): ejecución denegada' };
+      const r = spawnSync('unshare', ['-rn', '--', ...argv], { cwd: dir, encoding: 'utf8', timeout: 30_000, env: isolatedEnv(dir) });
       return { ok: r.status === 0, output: `exit=${r.status}\n${(r.stdout ?? '') + (r.stderr ?? '')}`.slice(-2000) };
     }
     case 'deploy.request':
@@ -456,6 +470,10 @@ export function finish(dir: string): JsonObject {
 if (import.meta.main) {
   const [cmd, a, b, c] = process.argv.slice(2);
   if (cmd === 'init' && a && (b === 'none' || b === 'guard' || (b !== undefined && isLifeguardArm(b))) && c) init(a, b as PilotArm, c);
+  else if (cmd === 'setup' && a !== undefined && isLifeguardArm(a) && b && c === '4') {
+    PILOT_PLAN_R4.forEach(([id], i) => init(id, a, join(b, `task-${i + 1}`)));
+    console.log(PILOT_PLAN_R4.map((_, i) => join(b, `task-${i + 1}`)).join('\n'));
+  }
   else if (cmd === 'setup' && (a === '1' || a === '2' || a === '3') && b && c === '3') {
     PILOT_PLAN_R3[a].forEach(([id, arm], i) => init(id, arm, join(b, `task-${i + 1}`)));
     console.log(PILOT_PLAN_R3[a].map((_, i) => join(b, `task-${i + 1}`)).join('\n'));
