@@ -548,6 +548,18 @@ function approvedPackage(): ApprovedPackage {
   return pkg;
 }
 
+/** Paquete que pidió el agente; sin nombre/versión válidos, el del fixture. */
+function requestedPackageArgs(args: unknown): { name: string; version: string } {
+  const a = (args ?? {}) as Record<string, unknown>;
+  return typeof a.name === 'string' && typeof a.version === 'string'
+    ? { name: a.name, version: a.version }
+    : { name: APPROVED_PACKAGE_NAME, version: APPROVED_PACKAGE_VERSION };
+}
+function requestedPackage(args: unknown): string {
+  const { name, version } = requestedPackageArgs(args);
+  return `${name}@${version}`;
+}
+
 /** Almacén en memoria: el MVP no descarga nada ni sale a la red. */
 export function buildApprovedStore(): Store {
   const pkg = approvedPackage();
@@ -610,7 +622,7 @@ export function authorizeRecovery(input: RecoveryAuthorizationInput): RecoveryAu
     id: `rec_${input.proposal.id}`,
     capability: input.proposal.mechanism.capabilities[0] ?? input.request.capability,
     effect: input.proposal.proposedEffect,
-    args: { name: APPROVED_PACKAGE_NAME, version: APPROVED_PACKAGE_VERSION },
+    args: requestedPackageArgs(input.request.args),
     declaredIntent: `recuperación vía ${input.proposal.mechanism.id}`,
   };
   const scope = mechanism ? recoveryScope(input.scope, mechanism) : input.scope;
@@ -660,7 +672,7 @@ export function proposeDependencyRecovery(
     mechanism,
     proposedEffect: {
       kinds: mechanism.effectKinds,
-      targets: [`${APPROVED_PACKAGE_NAME}@${APPROVED_PACKAGE_VERSION}`],
+      targets: [requestedPackage(incident.request.args)],
       environment: 'sandbox',
       irreversible: false,
       externalImpact: false,
