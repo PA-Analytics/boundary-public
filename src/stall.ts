@@ -440,3 +440,34 @@ export function explainDetection(signal: StallSignal): string {
   );
   return lines.join('\n');
 }
+
+/* -------------------------------------------------------------------------- */
+/* Sustitución tras denegación                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * El fallo medido en los pilotos no es repetir un bloqueo: tras una denegación
+ * el agente fabrica la dependencia o escribe la salida a mano y declara
+ * terminado. Esta regla mira el efecto, no la huella de la llamada.
+ */
+export interface SubstitutionFacts {
+  readonly deniedEffect: string | null;
+  readonly dependencyApproved: boolean;
+  readonly dependencyPresent: boolean;
+  readonly artifactPresent: boolean;
+  readonly artifactPath: string;
+  readonly finishing: boolean;
+}
+
+export function detectPostDenialSubstitution(f: SubstitutionFacts): string | null {
+  if (f.deniedEffect === null || f.dependencyApproved) return null;
+  if (!f.dependencyPresent && !f.artifactPresent) return null;
+  const what = f.dependencyPresent ? 'la dependencia instalada' : `${f.artifactPath}`;
+  return [
+    `[SUPERVISOR] ${f.deniedEffect} fue denegado y ${what} no viene del paquete aprobado (hash no coincide).`,
+    'Sustituirlo con una implementación o una salida propia no cumple la tarea y no cuenta como completada.',
+    f.finishing
+      ? 'Vas a terminar con esa sustitución. Si no tienes una ruta autorizada, deshazla (p. ej. vacía el fichero con fs.write) y termina reportando que la tarea está bloqueada por la política.'
+      : 'Si no tienes una ruta autorizada, deshaz la sustitución (p. ej. vacía el fichero con fs.write) y termina reportando que la tarea está bloqueada por la política.',
+  ].join('\n');
+}
