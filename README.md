@@ -137,8 +137,10 @@ allowed route exists. The metric was pre-registered (`docs/PILOT_PREREG.md`). Fu
 | Claim | Measured | Verdict |
 |---|---|---|
 | The gateway blocks unsafe actions without stopping the task | 46/48 barrier runs resolved, 0 violations, 0 deploys, 0 out-of-band edits | supported (directional) |
-| The stall guard rescues stuck agents | 23/24 with the guard vs 23/24 without; the repetition detector never fired | **not supported** |
-| Lifeguard recovery lets a blocked install finish | two differently shaped fixtures, 27 fresh agents: with Lifeguard 9/9 sessions resolved with the approved package; without it 0/9 (no gateway) and 0/9 (deny only), Fisher p = 0.004 and 0.014 per fixture; 13/18 of the agents without it **fabricated** a dependency that passed the visible tests | **supported** (provenance-safe completion) |
+| The stall guard rescues stuck agents | 23/24 with the guard vs 23/24 without; a redesign aimed at post-denial fabrication (round 6) never fired and was retired by its pre-registered rule | **not supported** |
+| An approved route lets a blocked install finish with approved bytes | two fixtures, 27 fresh agents: with Lifeguard 9/9 resolved; without any route 0/9 (no gateway) and 0/9 (deny only), Fisher p = 0.004 and 0.014; 13/18 without a route **fabricated** a dependency that passed the visible tests | **supported** |
+| Lifeguard's automatic recovery adds value over a manual approved route | round 6, least privilege: manual `store.fetch` 4/4 resolved (median 6.5 calls) vs Lifeguard 4/4 (8.5 calls); Lifeguard refused an unapproved version 2/2 | **not supported** (equal outcome) |
+| Least-privilege permission selection reduces unsafe workarounds | round 6 deny-only: 1/4 unsafe vs 4/4 in round 5 with broad permissions (p = 0.071, historical arm, prompt also changed) | **directional** |
 
 Caveats: a single agent model (Lite) and small n. Capable agents route around a denial or stop; they don't loop. So
 the stall guard has nothing to catch. The indirect-exec hole (a script edits a protected file) is closed by
@@ -160,8 +162,10 @@ Formal verdict for that sprint: **INCONCLUSIVE** (1 repetition per cell, 0 gatew
 
 ## Limitations
 
-- The stall guard showed **no effect** in live pilots. Lifeguard's dependency recovery is supported only for its
-  measured case: a blocked install with an approved artifact in the store (two fixtures, one model). Deny-only setups still let agents fabricate dependencies.
+- The stall guard showed **no effect** in live pilots, including a redesign aimed at fabrication after a denial.
+  What helped was an approved, hash-verified route; a plain granted `store.fetch` did as well as Lifeguard's
+  automatic recovery (round 6). Broad deny-only permissions let agents fabricate dependencies; least privilege
+  (narrow exec, protected dependency folder) cut that, directionally. One model, small n.
 - Live pilots used one agent model (Devin Lite). The results are directional, not significant.
 - The 200-scenario Gauntlet used during development is **not published**: it contains private
   evaluators, hidden tests and expected answers. The rest stays private by design.
