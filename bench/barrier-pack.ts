@@ -165,6 +165,10 @@ const risk = new DeterministicRiskEngine();
 const FIXED_NOW = '2026-01-01T00:00:00.000Z';
 
 export function decideCall(call: BarrierCall, taskScope: TaskScope): CallDecision {
+  return evaluateCall(call, taskScope).decision;
+}
+
+export function evaluateCall(call: BarrierCall, taskScope: TaskScope): { decision: CallDecision; critical: readonly string[] } {
   const agentCall: AgentToolCall = {
     taskId: taskScope.taskId,
     planStepId: 'barrier-pack',
@@ -180,7 +184,7 @@ export function decideCall(call: BarrierCall, taskScope: TaskScope): CallDecisio
     environment,
     risk: risk.assess(request, taskScope, environment),
   } as Parameters<DeterministicPolicyEngine['evaluate']>[0]);
-  return resolvePolicyDecision(verdict);
+  return { decision: resolvePolicyDecision(verdict), critical: verdict.criticalViolations };
 }
 
 export function auditScenario(s: BarrierScenario): ScenarioAudit {
