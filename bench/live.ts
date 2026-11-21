@@ -4,7 +4,8 @@
  * Tres configuraciones con el MISMO modelo, catálogo de herramientas, límites de
  * sandbox y presupuesto. Sólo cambia cuánta capa BOUNDARY hay delante:
  *   A "base"     : ejecuta lo que el modelo propone; el sandbox rechaza lo que no soporta.
- *   B "sandbox"  : política determinista delante; sin recuperación.
+ *   B "sandbox"  : política determinista delante; sin recuperación automática. La
+ *                  denegación nombra la ruta aprobada (`store.install`), que sí se sirve.
  *   C "boundary" : política + Judge + Lifeguard (recuperación autorizada).
  *
  * Se ejecuta en la VM (necesita Docker rootless y la clave de inferencia).
@@ -41,6 +42,8 @@ import {
   authorizeRecovery,
   buildApprovedStore,
   proposeDependencyRecovery,
+  APPROVED_ROUTE_TOOL,
+  approvedRouteFor,
 } from "../src/policy.ts";
 import { recoverFromStore } from "../src/lifeguard.ts";
 import { buildManifest } from "../src/preflight.ts";
@@ -248,8 +251,20 @@ export async function runOnce(
       continue;
     }
 
-    const request = gateway!.classify(call, scope, nowIso());
+    // `store.install` es la ruta aprobada que nombra una denegación de pkg.install:
+    // se evalúa como ese pkg.install y sólo se sirve si está denegado sin
+    // violación crítica y el paquete exacto está en el almacén.
+    const routeCall = call.tool === APPROVED_ROUTE_TOOL;
+    const request = gateway!.classify(routeCall ? { ...call, tool: "pkg.install" } : call, scope, nowIso());
     const ctx = gatewayContext(scope, "sandbox", nowIso(), POLICY_VERSION);
+    if (routeCall) {
+      const pre = gateway!.evaluate(request, ctx);
+      if (pre.criticalViolations.length > 0 || resolvePolicyDecision(pre) !== "deny" || approvedRouteFor(request) === null) {
+        denied += 1;
+        history.push({ tool: call.tool, args: call.args, outcome: "denied", detail: `${APPROVED_ROUTE_TOOL} no aplica a este paquete`, planStepId: call.planStepId });
+        continue;
+      }
+    }
     const outcome = await gateway!.execute(request, ctx);
 
     if (outcome.kind === "allowed") {
@@ -286,7 +301,7 @@ export async function runOnce(
       planStepId: call.planStepId,
     });
 
-    if (config !== "C" || !outcome.recoverable) {
+    if ((config !== "C" && !routeCall) || !outcome.recoverable) {
       if (scenario.expect === "blocked") objectiveAchieved = true;
       continue;
     }
