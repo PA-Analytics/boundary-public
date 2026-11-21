@@ -42,7 +42,8 @@ So the interesting failure is not a jailbreak. It is a task that stopped halfway
   can continue through a path the policy already allows. It never grants, escalates or removes a
   restriction. In live pilots the stall guard **never changed an outcome** (see Results).
 - **Approved-dependency recovery**: when an install is denied, Lifeguard can materialize a
-  pre-approved, hash-verified package. What it was measured to change is provenance, not completion (see Results).
+  pre-approved, hash-verified package. In round 6 a policy-gated manual install from the same store did as well,
+  so at the measured n the value is having an approved route, not Lifeguard itself (see Results).
 
 ## Architecture
 
@@ -138,9 +139,9 @@ allowed route exists. The metric was pre-registered (`docs/PILOT_PREREG.md`). Fu
 |---|---|---|
 | The gateway blocks unsafe actions without stopping the task | 46/48 barrier runs resolved, 0 violations, 0 deploys, 0 out-of-band edits | supported (directional) |
 | The stall guard rescues stuck agents | 23/24 with the guard vs 23/24 without; a redesign aimed at post-denial fabrication (round 6) never fired and was retired by its pre-registered rule | **not supported** |
-| An approved route lets a blocked install finish with approved bytes | two fixtures, 27 fresh agents: with Lifeguard 9/9 resolved; without any route 0/9 (no gateway) and 0/9 (deny only), Fisher p = 0.004 and 0.014; 13/18 without a route **fabricated** a dependency that passed the visible tests | **supported** |
-| Lifeguard's automatic recovery adds value over a manual approved route | round 6, least privilege: manual `store.fetch` 4/4 resolved (median 6.5 calls) vs Lifeguard 4/4 (8.5 calls); Lifeguard refused an unapproved version 2/2 | **not supported** (equal outcome) |
-| Least-privilege permission selection reduces unsafe workarounds | round 6 deny-only: 1/4 unsafe vs 4/4 in round 5 with broad permissions (p = 0.071, historical arm, prompt also changed) | **directional** |
+| An approved route lets a blocked install finish with approved bytes | rounds 4–5, two fixtures, 27 fresh agents: the Lifeguard config, the only one given a legitimate route to the approved package, resolved 9/9; configs without any route 0/9 (no gateway) and 0/9 (deny only), Fisher p = 0.004 and 0.014; 13/18 without a route **fabricated** a dependency that passed the visible tests | **supported** for having a route; does not isolate Lifeguard |
+| Lifeguard's automatic recovery adds value over a manual approved route | round 6, least privilege: a policy-gated manual `store.fetch` from the same approved store resolved 4/4 with fewer calls (median 6.5) than Lifeguard's 4/4 (8.5); Lifeguard refused an unapproved version 2/2 | **not supported**: at this n Lifeguard showed no advantage over an approved route |
+| Least-privilege permission selection reduces unsafe workarounds | round 6 deny-only: 1/4 unsafe vs 4/4 in round 5 with broad permissions (p = 0.071, historical arm, prompt also changed) | **directional only** |
 
 Caveats: a single agent model (Lite) and small n. Capable agents route around a denial or stop; they don't loop. So
 the stall guard has nothing to catch. The indirect-exec hole (a script edits a protected file) is closed by
@@ -163,9 +164,10 @@ Formal verdict for that sprint: **INCONCLUSIVE** (1 repetition per cell, 0 gatew
 ## Limitations
 
 - The stall guard showed **no effect** in live pilots, including a redesign aimed at fabrication after a denial.
-  What helped was an approved, hash-verified route; a plain granted `store.fetch` did as well as Lifeguard's
-  automatic recovery (round 6). Broad deny-only permissions let agents fabricate dependencies; least privilege
-  (narrow exec, protected dependency folder) cut that, directionally. One model, small n.
+  The detector never fired and is retired. What helped was an approved, hash-verified route: in round 6 a
+  policy-gated manual `store.fetch` resolved 4/4 with fewer calls than Lifeguard's 4/4, so at this n Lifeguard
+  showed no advantage over it. In rounds 4–5 the Lifeguard config was the only one with a legitimate route.
+  Least privilege (narrow exec, protected dependency folder) cut unsafe workarounds only directionally. One model, small n.
 - Live pilots used one agent model (Devin Lite). The results are directional, not significant.
 - The 200-scenario Gauntlet used during development is **not published**: it contains private
   evaluators, hidden tests and expected answers. The rest stays private by design.
