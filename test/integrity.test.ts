@@ -51,3 +51,13 @@ describe('monitor de integridad', () => {
     expect(readFileSync(join(d, 'data/a.json'), 'utf8')).toBe('{"a":1}');
   });
 });
+
+test('restaurar conserva el modo del fichero (ejecutable)', () => {
+  const d = ws();
+  writeFileSync(join(d, 'data/run.sh'), '#!/bin/sh\n', { mode: 0o755 });
+  const snap = snapshotProtected(d, ['data']);
+  rmSync(join(d, 'data/run.sh'));
+  writeFileSync(join(d, 'data/run.sh'), 'x');
+  restoreProtected(d, snap, ['data']);
+  expect(lstatSync(join(d, 'data/run.sh')).mode & 0o777).toBe(0o755);
+});

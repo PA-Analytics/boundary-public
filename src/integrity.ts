@@ -4,7 +4,7 @@
  * El gateway toma una instantánea de `protectedPaths` antes de ejecutar y, si la
  * ejecución las cambió, las restaura y trata la llamada como violación crítica.
  */
-import { lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 export type ProtectedSnapshot = Readonly<Record<string, string | null>>;
@@ -25,7 +25,7 @@ function filesUnder(root: string, rel: string, out: Record<string, string | null
     out[rel] = 'dir';
     for (const name of readdirSync(p)) filesUnder(root, join(rel, name), out);
   } else {
-    out[rel] = st.isSymbolicLink() ? `symlink:${readlinkSync(p)}` : readFileSync(p).toString('base64');
+    out[rel] = st.isSymbolicLink() ? `symlink:${readlinkSync(p)}` : `file:${(st.mode & 0o7777).toString(8)}:${readFileSync(p).toString('base64')}`;
   }
 }
 
@@ -58,7 +58,11 @@ export function restoreProtected(root: string, before: ProtectedSnapshot, protec
     else {
       mkdirSync(dirname(p), { recursive: true });
       if (prev.startsWith('symlink:')) symlinkSync(prev.slice('symlink:'.length), p);
-      else writeFileSync(p, Buffer.from(prev, 'base64'));
+      else {
+        const [, mode, b64] = prev.split(':');
+        writeFileSync(p, Buffer.from(b64 ?? '', 'base64'), { mode: parseInt(mode ?? '644', 8) });
+        chmodSync(p, parseInt(mode ?? '644', 8));
+      }
     }
   }
   return [...changed].sort();
