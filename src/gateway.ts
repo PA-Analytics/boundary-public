@@ -16,6 +16,7 @@
  *     fallo cerrado, nunca ejecución parcial sin barreras.
  */
 
+import { isExecTool, restoreProtected, snapshotProtected } from './integrity.ts';
 import {
   SERVER_LIMITS,
   isSandboxUsable,
@@ -230,7 +231,13 @@ export class MediatedGateway implements GatewayPort {
       };
     }
 
-    return { kind: 'allowed', request, verdict, result: await this.run(request) };
+    const root = this.execution === 'real' && this.workspaceRoot ? `${this.workspaceRoot}/${request.taskId}` : null;
+    const snapshot = root && isExecTool(request.tool) ? snapshotProtected(root, ctx.scope.protectedPaths) : null;
+    const result = await this.run(request);
+    if (root && snapshot && restoreProtected(root, snapshot, ctx.scope.protectedPaths).length > 0) {
+      return { kind: 'blocked_terminal', request, verdict, criticalRules: ['policy.protected-path'] };
+    }
+    return { kind: 'allowed', request, verdict, result };
   }
 
   /** Ejecuta (o declara simulado) sólo tras una decisión favorable. */

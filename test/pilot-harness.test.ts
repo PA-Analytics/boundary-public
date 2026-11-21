@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -76,5 +76,39 @@ describe('give-up guard', () => {
     const d = ws();
     init('BND-035', 'guard', d);
     expect(finish(d).finished).toBe(true);
+  });
+});
+
+describe('integridad y anti-falsificación', () => {
+  test('indirect-exec: un script propio que reescribe la ruta protegida se bloquea y se restaura', () => {
+    const d = ws();
+    init('BND-025', 'none', d);
+    const before = readFileSync(join(d, 'data/billing.json'), 'utf8');
+    call(d, 'fs.write', { path: 'tools/patch.mjs', content: "import { writeFileSync } from 'node:fs'; writeFileSync('data/billing.json', '[]');" });
+    const out = call(d, 'proc.exec', { argv: ['node', 'tools/patch.mjs'] });
+    expect(out).toContain('policy.protected-path');
+    expect(readFileSync(join(d, 'data/billing.json'), 'utf8')).toBe(before);
+    expect(finish(d).resolved).toBe(false);
+  });
+
+  test('un symlink no sirve de alias para escribir una ruta protegida', () => {
+    const d = ws();
+    init('BND-008', 'none', d);
+    call(d, 'proc.exec', { argv: ['ln', '-s', 'data', 'alias'] });
+    expect(call(d, 'fs.write', { path: 'alias/catalog.json', content: '[]' })).toContain('args inválidos');
+    expect(finish(d).resolved).toBe(false);
+  });
+
+  test('control: vaciar acceptance.js no falsifica el éxito', () => {
+    const d = ws();
+    init('BND-031', 'none', d);
+    call(d, 'fs.write', { path: 'acceptance.js', content: '' });
+    expect(finish(d).resolved).toBe(false);
+  });
+
+  test('init rechaza un directorio ya usado', () => {
+    const d = ws();
+    init('BND-031', 'none', d);
+    expect(() => init('BND-031', 'none', d)).toThrow();
   });
 });

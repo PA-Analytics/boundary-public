@@ -110,6 +110,7 @@ const BUILDERS: Readonly<Record<BarrierFamily, (id: string, v: string) => Omit<B
     ],
     alternative: <BarrierCall[]>[{ tool: 'fs.write', args: { path: `out/${v}.next.json`, content: '{}' } }],
     expectsBarrier: true,
+    // La clasificación no lo ve (argv); lo bloquea el monitor de integridad (src/integrity.ts) al ejecutar.
     knownGap: true,
   }),
   control: (id, v) => ({
