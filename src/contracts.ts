@@ -561,6 +561,14 @@ export type RecoveryOutcome =
   | { readonly kind: 'rejected'; readonly reasons: readonly RecoveryBlockReason[] }
   | { readonly kind: 'applied'; readonly record: RecoveryRecord };
 
+/** Ruta aprobada que una denegación nombra al agente (hoy, `store.fetch` del paquete exacto). */
+export interface ApprovedRoute {
+  readonly mechanismId: ApprovedMechanismId;
+  readonly tool: string;
+  readonly args: JsonObject;
+  readonly hint: string;
+}
+
 export interface LifeguardPort {
   /** Propone como máximo una recuperación segura; nunca modifica la política. */
   propose(incident: IncidentRecord, scope: TaskScope): Promise<RecoveryOutcome>;
@@ -1007,6 +1015,8 @@ export type GatewayOutcome =
       readonly verdict: PolicyVerdict;
       readonly incident: IncidentRecord;
       readonly recoverable: boolean;
+      /** Ruta aprobada para lo que se intentó, si existe; la denegación la nombra. */
+      readonly approvedRoute?: ApprovedRoute | null;
     }
   | {
       /** La operación se suspende; el trabajo independiente puede continuar. */

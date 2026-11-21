@@ -39,6 +39,7 @@ import {
   type JsonObject,
   type JsonValue,
   type OperationFingerprint,
+  type ApprovedRoute,
   type OperationRequest,
   type PolicyInput,
   type PolicyPort,
@@ -564,6 +565,26 @@ function requestedPackage(args: unknown): string {
 export function buildApprovedStore(): Store {
   const pkg = approvedPackage();
   return { [`${pkg.name}@${pkg.version}`]: pkg };
+}
+
+export const APPROVED_ROUTE_TOOL = 'store.fetch';
+
+/**
+ * Ruta aprobada para una operación denegada: `store.fetch` del paquete exacto
+ * `name@version` si está en el almacén preaprobado. Sin sustitutos ni versiones.
+ */
+export function approvedRouteFor(request: OperationRequest, store: Store = buildApprovedStore()): ApprovedRoute | null {
+  if (request.tool !== 'pkg.install') return null;
+  const a = (request.args ?? {}) as Record<string, unknown>;
+  if (typeof a.name !== 'string' || typeof a.version !== 'string') return null;
+  const key = `${a.name}@${a.version}`;
+  if (!Object.prototype.hasOwnProperty.call(store, key)) return null;
+  return {
+    mechanismId: RECOVERY_MECHANISM_ID,
+    tool: APPROVED_ROUTE_TOOL,
+    args: { name: a.name, version: a.version },
+    hint: `Ruta aprobada: ${APPROVED_ROUTE_TOOL} {"name":"${a.name}","version":"${a.version}"} instala ${key} desde el almacén preaprobado (hash verificado, sin red).`,
+  };
 }
 
 /** SHA-256 fijado del paquete aprobado (para que el preflight lo declare). */

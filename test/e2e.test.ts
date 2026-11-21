@@ -14,6 +14,7 @@ import { approvedPackageSha256, APPROVED_PACKAGE_NAME, APPROVED_PACKAGE_VERSION 
 import {
   LocalLifeguard,
   RECOVERY_AUTHORIZATION_TTL_MS,
+  createServerState,
   startServer,
   type SimulatedRecoveryRecord,
   type StartedServer,
@@ -200,7 +201,7 @@ describe('tarea: preflight, agente y gateway', () => {
     expect(created.status).toBe(422);
   });
 
-  test('pkg.install denegado se recupera de forma simulada desde el almacén', async () => {
+  test('pkg.install denegado nombra la ruta aprobada y store.fetch la usa (sin Lifeguard automático)', async () => {
     // Tarea que declara la dependencia aprobada (hash verificado, sin red):
     // sólo así el alcance autoriza registro + referencia y la denegación
     // por capacidad es recuperable en lugar de terminal.
@@ -216,7 +217,7 @@ describe('tarea: preflight, agente y gateway', () => {
     expect(created.status).toBe(201);
     expect(created.body.preflight.preparation.prepared.length).toBe(1);
     const depTaskId = created.body.task.taskId as string;
-    const { body } = await api(`/api/tasks/${depTaskId}/steps`, {
+    const denied = await api(`/api/tasks/${depTaskId}/steps`, {
       method: 'POST',
       body: JSON.stringify({
         tool: 'pkg.install',
@@ -224,6 +225,22 @@ describe('tarea: preflight, agente y gateway', () => {
         declaredIntent: 'instalar dependencia aprobada',
       }),
     });
+    expect(denied.body.kind).toBe('denied');
+    expect(denied.body.approvedRoute.tool).toBe('store.fetch');
+    expect(denied.body.approvedRoute.args).toEqual({ name: 'boundary-cost-tools', version: '1.4.2' });
+    expect(denied.body.hint).toContain('store.fetch');
+    expect(denied.body.incident.restriction.detail).toContain('store.fetch');
+    expect(denied.body.recovery).toBeUndefined();
+
+    const { body } = await api(`/api/tasks/${depTaskId}/steps`, {
+      method: 'POST',
+      body: JSON.stringify({
+        tool: 'store.fetch',
+        args: { name: 'boundary-cost-tools', version: '1.4.2' },
+        declaredIntent: 'ruta aprobada',
+      }),
+    });
+    expect(body.trigger).toBe('store.fetch');
     expect(body.kind).toBe('recovered');
     expect(body.executed).toBe(false);
     expect(body.simulated).toBe(true);
@@ -241,6 +258,53 @@ describe('tarea: preflight, agente y gateway', () => {
     expect(state.body.incidents.length).toBeGreaterThan(0);
     expect(state.body.risk.length).toBeGreaterThan(0);
     expect(Array.isArray(state.body.approvals)).toBe(true);
+  });
+
+  test('una versión no aprobada no recibe ruta y store.fetch no la instala', async () => {
+    const created = await api('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        objective: 'instalar dependencia preaprobada',
+        declaredDependencies: [
+          { name: APPROVED_PACKAGE_NAME, version: APPROVED_PACKAGE_VERSION, sha256: approvedPackageSha256() },
+        ],
+      }),
+    });
+    const taskId = created.body.task.taskId as string;
+    const step = (tool: string) =>
+      api(`/api/tasks/${taskId}/steps`, {
+        method: 'POST',
+        body: JSON.stringify({ tool, args: { name: APPROVED_PACKAGE_NAME, version: '9.9.9' }, declaredIntent: 'otra versión' }),
+      });
+    const denied = await step('pkg.install');
+    expect(denied.body.kind).not.toBe('recovered');
+    expect(denied.body.approvedRoute ?? null).toBeNull();
+    const fetched = await step('store.fetch');
+    expect(fetched.body.kind).toBe('denied');
+    expect(fetched.body.recovery).toBeUndefined();
+  });
+
+  test('con autoRecovery activado, Lifeguard recupera el pkg.install denegado', async () => {
+    const auto = await startServer({ port: 0 }, createServerState(undefined, { autoRecovery: true }));
+    try {
+      const call = (path: string, body: unknown) =>
+        fetch(`${auto.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json() as Promise<any>);
+      const created = await call('/api/tasks', {
+        objective: 'instalar dependencia preaprobada',
+        declaredDependencies: [
+          { name: APPROVED_PACKAGE_NAME, version: APPROVED_PACKAGE_VERSION, sha256: approvedPackageSha256() },
+        ],
+      });
+      const body = await call(`/api/tasks/${created.task.taskId}/steps`, {
+        tool: 'pkg.install',
+        args: { name: APPROVED_PACKAGE_NAME, version: APPROVED_PACKAGE_VERSION },
+        declaredIntent: 'instalar dependencia aprobada',
+      });
+      expect(body.kind).toBe('recovered');
+      expect(body.trigger).toBe('auto');
+    } finally {
+      await auto.close();
+    }
   });
 });
 
