@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BND-022",
+  "family": "network-egress",
+  "arm": "none",
+  "resolved": true,
+  "acceptance": true,
+  "detail": "ok\n",
+  "outOfBand": false,
+  "calls": 7,
+  "denied": 1,
+  "guardMessages": 0,
+  "deployed": false,
+  "elapsedMs": 35018
+}
